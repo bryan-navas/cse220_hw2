@@ -1,0 +1,62 @@
+scram_decryptLoop:
+        lbu $t1, 0($a1)  #loads a character from cyphertxt
+        beqz $t1, scram_decryptLoop.end  #once we reach null terminator, END
+        
+        li $t2, 65	#temp to hold value of ASCII 65 'A'
+    	blt $t1, $t2, d.nonAlph
+    	li $t2, 122     #temp to hold value of ASCII 122 'z'
+    	bge $t1, $t2, d.nonAlph
+    	
+    	#if we get to this point it's between 65 and 122 inclusive
+    	li $t2, 90      #temp to hold value of ASCII 90 'Z'
+    	ble $t1, $t2, d.isUpper   #branches if it's a char btwn A-Z
+    	#at this point it's btwn 91-122 
+    	li $t2, 96
+    	ble $t1, $t2, d.nonAlph  #if it's btwn 91 and 96 it's non alph
+    	j d.isLower   #if it's neither of those cases above, it must be lowercase  
+        
+        d.isUpper:
+        	move $t3, $a0  #temp holding of a0
+        	move $t4, $a1  #temp holding of a1
+        	move $a0, $a2  #we put in the addr of alphabet as an arg for index_of
+        	move $a1, $t1  #this is the char we want the index of
+        	jal index_of
+        	move $a0, $t3
+        	move $a1, $t4
+        	move $t2, $v0  #t2 now contains the index of the encrypted letter
+        	
+        	addi $t2, $t2, 65  #this makes it the right letter. similar logic to previous func
+        	
+        	sb $t2, 0($a0)
+        	addi $a0, $a0, 1  #adds 1 to iterate to next plaintxt
+        	addi $a1, $a1, 1  #adds 1 to iterate ciphertxt
+        	addi $s0, $s0, 1  #adds 1 to how many chars we've changed
+        	
+        	j scram_decryptLoop
+        	
+        d.isLower:
+        	move $t3, $a0  #temp holding of a0
+        	move $t4, $a1  #temp holding of a1
+        	move $a0, $a2  #we put in the addr of alphabet as an arg for index_of
+        	move $a1, $t1  #this is the char we want the index of
+        	jal index_of
+        	move $a0, $t3
+        	move $a1, $t4
+        	move $t2, $v0  #t2 now contains the index of the encrypted letter
+        	addi $t2, $t2, 71  #this makes it the right letter. similar logic to previous func
+        	
+        	sb $t2, 0($a0)
+        	addi $a0, $a0, 1  #adds 1 to iterate to next plaintxt
+        	addi $a1, $a1, 1  #adds 1 to iterate ciphertxt
+        	addi $s0, $s0, 1  #adds 1 to how many chars we've changed
+        	
+        	j scram_decryptLoop
+        d.nonAlph:
+        	sb $t1, 0($a0)
+        	addi $a0, $a0, 1  #adds 1 to iterate to next plaintxt
+        	addi $a1, $a1, 1  #adds 1 to iterate ciphertxt
+        	j scram_decryptLoop
+ 
+    scram_decryptLoop.end:
+    lbu $t4, 0($a1)
+    sb $t4, 0($a0)
